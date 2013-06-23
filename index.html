@@ -81,6 +81,14 @@ function save() {
 	});
 }
 
+var UI = {
+	addQuestion: function() {
+		var node = $("#save-div table tbody.site-body-input tr:last");
+		var copy = node.clone(true);
+		node.parent().append(copy);
+	}
+};
+
 $(document).ready(function() {
 	if(ciphertext == "") {
 		$("#password-div")[0].style.display = "none";
@@ -101,6 +109,21 @@ $(document).ready(function() {
 <div id="save-div">
 <div id="new-pass" style="display:none;">New pass: <input type="text"></input></div><input type="button" value="Save" onclick="save()">
 <textarea></textarea>
+<table>
+<thead>
+<tr><th>Site</th><th>Username</th><th>Password</th></tr>
+<tr><th></th><th>Secret Question</th><th>Answer</th></tr>
+</thead>
+<tbody class="site-body">
+<tr><td>example.com</td><td>user@example.com</td><td>testpass</td></tr>
+<tr><td></td><td>Question 1</td><td>Answer 1</td></tr>
+<tr><td></td><td>Question 2</td><td>Answer 2</td></tr>
+</tbody>
+<tbody class="site-body-input">
+<tr><td><input type="text" value="Site name" class="site-name"></td><td><input type="text" value="Site-specific email" class="site-user"></td><td><input type="text" value="password" class="site-pass"></td></tr>
+<tr><td></td><td><textarea class="site-question">Security Question</textarea></td><td><input type="text" value="" class="site-answer"></td></tr>
+</tbody>
+</table>
 </div>
 </body>
 </html>
