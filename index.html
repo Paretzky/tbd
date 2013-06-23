@@ -3,15 +3,9 @@
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
 <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
 <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/aes.js"></script>
-<script>
-    var encrypted = CryptoJS.AES.encrypt("Message", "Secret Passphrase");
-
-    var decrypted = CryptoJS.AES.decrypt(encrypted, "Secret Passphrase");
-</script>
-
 </head>
 <script>
-var ciphertext = "{\"ct\":\"f4VwPL+oUeBgmtEsj7DJHg==\",\"iv\":\"9dcbb609c8a4ad42ba48e01a436e76e6\",\"s\":\"d5d64726daf8b6cd\"}";
+var ciphertext = decodeURI("%ciphertext%");
 
 var JsonFormatter = {
 	// this block copypastas from https://code.google.com/p/crypto-js/#The_Cipher_Output
@@ -56,15 +50,46 @@ var JsonFormatter = {
 
 function decrypt() {
 	var password = $("#password-div input[type=password]")[0].value;
+	console.log("\"" + ciphertext + "\"");
+	var decrypted = CryptoJS.AES.decrypt(ciphertext,password,{format:JsonFormatter});
+	$("#save-div textarea")[0].innerHTML = decrypted.toString(CryptoJS.enc.Utf8);
 	$("#password-div")[0].style.display = "none";
-	var decrypted = CryptoJS.AES.decrypt(ciphertext,"pass",{format:JsonFormatter});
-	document.body.appendChild(document.createTextNode(decrypted.toString(CryptoJS.enc.Utf8)));
 	$("#save-div")[0].style.display = "block";
 }
 
-function encrypt(str) {
-	CryptoJS.AES.encrypt(str,"pass",{format:JsonFormatter});
+function save() {
+	var newCleartext = $("#save-div textarea")[0].value;
+	var password = null;
+	if(ciphertext == "") {
+		password = $("#new-pass input[type=text]")[0].value;
+	} else {
+		password = $("#password-div input[type=password]")[0].value;
+	}
+	console.log(password);
+	var newCiphertext = encodeURI(CryptoJS.AES.encrypt(newCleartext,password,{format:JsonFormatter}).toString());
+	console.log(newCiphertext)
+	$.ajax({
+		url:	window.location.href,
+		dataType: "json",
+		type: "PUT",
+		data: newCiphertext,
+		success: function(data,status,req) {
+			console.log("success\t" + req);
+		},
+		error:	function(req,status,err) {
+			console.log("error\t" + status);
+		}
+	});
 }
+
+$(document).ready(function() {
+	if(ciphertext == "") {
+		$("#password-div")[0].style.display = "none";
+		
+		$("#save-div")[0].style.display = "block";
+		$("#new-pass")[0].style.display = "block";
+	}
+});
 </script>
 <style>
 #save-div {
@@ -76,7 +101,8 @@ function encrypt(str) {
 <p>Enter password: <input type="password"> <input type="button" value="Decrypt" onclick="decrypt()"></p>
 </div>
 <div id="save-div">
-<input type="button" value="Save">
+<div id="new-pass" style="display:none;">New pass: <input type="text"></input></div><input type="button" value="Save" onclick="save()">
+<textarea></textarea>
 </div>
 </body>
 </html>
