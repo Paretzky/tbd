@@ -65,15 +65,14 @@ function save() {
 	} else {
 		password = $("#password-div input[type=password]")[0].value;
 	}
-	console.log(password);
 	var newCiphertext = encodeURI(CryptoJS.AES.encrypt(newCleartext,password,{format:JsonFormatter}).toString());
-	console.log(newCiphertext)
 	$.ajax({
 		url:	window.location.href,
 		dataType: "json",
 		type: "PUT",
 		data: newCiphertext,
 		success: function(data,status,req) {
+			console.log(JSON.parse(req.responseText));
 			console.log("success\t" + req);
 		},
 		error:	function(req,status,err) {
@@ -85,7 +84,6 @@ function save() {
 $(document).ready(function() {
 	if(ciphertext == "") {
 		$("#password-div")[0].style.display = "none";
-		
 		$("#save-div")[0].style.display = "block";
 		$("#new-pass")[0].style.display = "block";
 	}
