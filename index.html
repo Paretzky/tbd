@@ -53,13 +53,13 @@ function decrypt() {
 	var password = $("#password-div input[type=password]")[0].value;
 	console.log("\"" + ciphertext + "\"");
 	var decrypted = CryptoJS.AES.decrypt(ciphertext,password,{format:JsonFormatter});
-	$("#save-div textarea")[0].innerHTML = decrypted.toString(CryptoJS.enc.Utf8);
+	console.log(JSON.parse(decrypted.toString(CryptoJS.enc.Utf8)));
 	$("#password-div")[0].style.display = "none";
 	UI.init();
 }
 
 function save() {
-	var newCleartext = $("#save-div textarea")[0].value;
+	var newCleartext = JSON.stringify(UI.collect());
 	var password = null;
 	if(ciphertext == "") {
 		password = $("#new-pass input[type=text]")[0].value;
@@ -88,6 +88,12 @@ var UI = {
 		var copy = node.clone(true);
 		node.parent().append(copy);
 	},
+	addSite: function() {
+		var node = $("#save-div table:hidden tbody.site-body-input");
+		var copy = node.clone(true);
+		var targetNode = $("#save-div table:visible tbody.site-body-input:first");
+		targetNode.before(copy);
+	},
 	init: function(options) {
 		$("#save-div")[0].style.display = "block";
 		var table = $("#save-div table");
@@ -95,13 +101,34 @@ var UI = {
 		newTable[0].style.display = "block";
 		table.parent().append(newTable);
 		$("#save-div table:visible input[type=text]").focus(function(ev){ev.target.value=""})
-		//$("#save-div table:visible tbody").remove();
+		$("#save-div table:visible tbody:first").remove();
 		if(options.hasOwnProperty("new-pass") && options["new-pass"] == true) {
 			$("#new-pass")[0].style.display = "block";
 		}
 	},
-	addSite: function(site, user, pass) {
-		var emptySite = $("#save-div table:hidden tbody:first").clone(true);
+	collect: function() {
+		var nodes = $("#save-div table:visible tbody.site-body-input");
+		var sites = [];
+		for(var i = 0; i < nodes.length;i++) {
+			var site = {};
+			var node = $(nodes[i]);
+			site["name"] = node.find("tr:first td:nth-child(1) input[type=text]")[0].value;
+			site["user"] = node.find("tr:first td:nth-child(2) input[type=text]")[0].value;
+			site["pass"] = node.find("tr:first td:nth-child(3) input[type=text]")[0].value;
+			var questions = node.find("tr:not(:first)");
+			if(questions.length > 0) {
+				site["questions"] = [];
+			}
+			for(var j = 0;j< questions.length;j++) {
+				var question = {};
+				var qNode = $(questions[j]);
+				question["question"] = qNode.find("td:nth-child(2) textarea")[0].innerHTML; 
+				question["answer"] = qNode.find("td:nth-child(3) input[type=text]")[0].value; 
+				site["questions"].push(question);
+			}
+			sites.push(site);
+		}
+		return sites;
 	}
 };
 
@@ -124,7 +151,6 @@ $(document).ready(function() {
 </div>
 <div id="save-div">
 <div id="new-pass" style="display:none;">New pass: <input type="text"></input></div><input type="button" value="Save" onclick="save()">
-<textarea></textarea>
 <table style="display:none">
 <thead>
 <tr><th>Site</th><th>Username</th><th>Password</th></tr>
@@ -140,6 +166,7 @@ $(document).ready(function() {
 <tr><td></td><td><textarea class="site-question">Security Question</textarea></td><td><input type="text" value="" class="site-answer"></td></tr>
 </tbody>
 </table>
+<input type="button" value="Add security question" onclick="UI.addQuestion()"><input type="button" value="Add site" onclick="UI.addSite()">
 </div>
 </body>
 </html>
