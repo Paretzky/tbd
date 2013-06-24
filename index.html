@@ -51,11 +51,10 @@ var JsonFormatter = {
 
 function decrypt() {
 	var password = $("#password-div input[type=password]")[0].value;
-	console.log("\"" + ciphertext + "\"");
 	var decrypted = CryptoJS.AES.decrypt(ciphertext,password,{format:JsonFormatter});
-	console.log(JSON.parse(decrypted.toString(CryptoJS.enc.Utf8)));
+	var sites = JSON.parse(decrypted.toString(CryptoJS.enc.Utf8));
 	$("#password-div")[0].style.display = "none";
-	UI.init();
+	UI.init({"sites":sites});
 }
 
 function save() {
@@ -84,9 +83,10 @@ function save() {
 
 var UI = {
 	addQuestion: function() {
-		var node = $("#save-div table tbody.site-body-input tr:last");
+		var node = $("#save-div table:hidden tbody.site-body-input tr:last");
+		var targetNode = $("#save-div table:visible tbody.site-body-input tr:last");
 		var copy = node.clone(true);
-		node.parent().append(copy);
+		targetNode.parent().append(copy);
 	},
 	addSite: function() {
 		var node = $("#save-div table:hidden tbody.site-body-input");
@@ -100,11 +100,40 @@ var UI = {
 		var newTable = table.clone(true);
 		newTable[0].style.display = "block";
 		table.parent().append(newTable);
-		$("#save-div table:visible input[type=text]").focus(function(ev){ev.target.value=""})
+		var focusFun = function(ev){
+			if(ev.target.hasOwnProperty("touched")){
+				return;
+			}
+			ev.target["touched"] = true;
+			if(ev.target.tagName.match(/input/i)) {
+				ev.target.value="";
+			}
+			if(ev.target.tagName.match(/textarea/i)) {
+				ev.target.innerHTML="";
+			}
+		};
+		$("#save-div table:visible input[type=text]").focus(focusFun);
+		$("#save-div table:visible textarea").focus(focusFun);
 		$("#save-div table:visible tbody:first").remove();
 		if(options.hasOwnProperty("new-pass") && options["new-pass"] == true) {
 			$("#new-pass")[0].style.display = "block";
 		}
+		if(options.hasOwnProperty("sites") && options["sites"].length > 0) {
+			$("#save-div table:visible tbody").remove();
+			var sites = options["sites"];
+			var targetNode = $("#save-div table:visible thead")
+			for(var i = 0; i < sites.length; i ++) {
+				var site = sites[i];
+				var node = $("#save-div table:hidden tbody:first").clone(true);
+				node.find("tr:first td:nth-child(1)")[0].innerHTML = site["name"];
+				node.find("tr:first td:nth-child(2)")[0].innerHTML = site["user"];
+				node.find("tr:first td:nth-child(3)")[0].innerHTML = site["pass"];
+				targetNode.after(node);
+			}
+		}
+		$("#save-div table:visible tbody.site-body").click(function(ev){
+			console.log($(ev.target).parents("tbody"));
+		});
 	},
 	collect: function() {
 		var nodes = $("#save-div table:visible tbody.site-body-input");
@@ -129,20 +158,22 @@ var UI = {
 			sites.push(site);
 		}
 		return sites;
-	}
+	},
 };
 
 $(document).ready(function() {
 	if(ciphertext == "") {
 		$("#password-div")[0].style.display = "none";
-		UI.init({"new-pass":true});
-		
+		UI.init({"new-pass":true});	
 	}
 });
 </script>
 <style>
 #save-div {
 	display: none;
+}
+.hover:hover {
+	background:	green;
 }
 </style>
 <body>
@@ -156,14 +187,14 @@ $(document).ready(function() {
 <tr><th>Site</th><th>Username</th><th>Password</th></tr>
 <tr><th></th><th>Secret Question</th><th>Answer</th></tr>
 </thead>
-<tbody class="site-body">
+<tbody class="site-body hover">
 <tr><td>example.com</td><td>user@example.com</td><td>testpass</td></tr>
 <tr><td></td><td>Question 1</td><td>Answer 1</td></tr>
 <tr><td></td><td>Question 2</td><td>Answer 2</td></tr>
 </tbody>
 <tbody class="site-body-input">
 <tr><td><input type="text" value="Site name" class="site-name"></td><td><input type="text" value="Site-specific email" class="site-user"></td><td><input type="text" value="password" class="site-pass"></td></tr>
-<tr><td></td><td><textarea class="site-question">Security Question</textarea></td><td><input type="text" value="" class="site-answer"></td></tr>
+<tr><td></td><td><textarea class="site-question">Security Question</textarea></td><td><input type="text" value="Answer" class="site-answer"></td></tr>
 </tbody>
 </table>
 <input type="button" value="Add security question" onclick="UI.addQuestion()"><input type="button" value="Add site" onclick="UI.addSite()">
