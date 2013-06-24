@@ -53,12 +53,13 @@ function decrypt() {
 	var password = $("#password-div input[type=password]")[0].value;
 	var decrypted = CryptoJS.AES.decrypt(ciphertext,password,{format:JsonFormatter});
 	var sites = JSON.parse(decrypted.toString(CryptoJS.enc.Utf8));
+	console.log(sites);
 	$("#password-div")[0].style.display = "none";
 	UI.init({"sites":sites});
 }
 
 function save() {
-	var newCleartext = JSON.stringify(UI.collect());
+	var newCleartext = JSON.stringify(UI.getSites());
 	var password = null;
 	if(ciphertext == "") {
 		password = $("#new-pass input[type=text]")[0].value;
@@ -87,19 +88,22 @@ var UI = {
 		var targetNode = $("#save-div table:visible tbody.site-body-input tr:last");
 		var copy = node.clone(true);
 		targetNode.parent().append(copy);
+		UI.update();
 	},
 	addSite: function() {
+		UI.collectUpdate();
 		var node = $("#save-div table:hidden tbody.site-body-input");
 		var copy = node.clone(true);
-		var targetNode = $("#save-div table:visible tbody.site-body-input:first");
-		targetNode.before(copy);
+		var targetNode = $("#save-div table:visible tbody:last");
+		if(targetNode.length == 0) {
+			targetNode = $("#save-div table:visible thead:last");
+			targetNode.after(copy);	
+		} else {
+			targetNode.after(copy);
+		}
+		UI.update();
 	},
-	init: function(options) {
-		$("#save-div")[0].style.display = "block";
-		var table = $("#save-div table");
-		var newTable = table.clone(true);
-		newTable[0].style.display = "block";
-		table.parent().append(newTable);
+	update: function() {
 		var focusFun = function(ev){
 			if(ev.target.hasOwnProperty("touched")){
 				return;
@@ -114,6 +118,14 @@ var UI = {
 		};
 		$("#save-div table:visible input[type=text]").focus(focusFun);
 		$("#save-div table:visible textarea").focus(focusFun);
+	},
+	init: function(options) {
+		$("#save-div")[0].style.display = "block";
+		var table = $("#save-div table");
+		var newTable = table.clone(true);
+		newTable[0].style.display = "block";
+		table.parent().append(newTable);
+		UI.update();
 		$("#save-div table:visible tbody:first").remove();
 		if(options.hasOwnProperty("new-pass") && options["new-pass"] == true) {
 			$("#new-pass")[0].style.display = "block";
@@ -122,12 +134,22 @@ var UI = {
 			$("#save-div table:visible tbody").remove();
 			var sites = options["sites"];
 			var targetNode = $("#save-div table:visible thead")
-			for(var i = 0; i < sites.length; i ++) {
+			for(var i = 0; i < sites.length; i++) {
 				var site = sites[i];
 				var node = $("#save-div table:hidden tbody:first").clone(true);
+				node.find("tr:not(:first)").remove();
 				node.find("tr:first td:nth-child(1)")[0].innerHTML = site["name"];
 				node.find("tr:first td:nth-child(2)")[0].innerHTML = site["user"];
 				node.find("tr:first td:nth-child(3)")[0].innerHTML = site["pass"];
+				if(site.hasOwnProperty("questions")) {
+					for(var j = 0; j < site["questions"].length; j++) {
+						var question = site["questions"][j];
+						var qNode = $("#save-div table:hidden tbody.site-body tr:nth-child(2)").clone(true);
+						qNode.find("td:nth-child(2)")[0].innerHTM = question["question"];
+						qNode.find("td:nth-child(3)")[0].innerHTM = question["answer"];
+						node.append(qNode);
+					}
+				}
 				targetNode.after(node);
 			}
 		}
@@ -151,7 +173,11 @@ var UI = {
 			for(var j = 0;j< questions.length;j++) {
 				var question = {};
 				var qNode = $(questions[j]);
-				question["question"] = qNode.find("td:nth-child(2) textarea")[0].innerHTML; 
+				if(qNode.find("td:nth-child(2) textarea")[0].value == "") {
+					question["question"] = qNode.find("td:nth-child(2) textarea")[0].innerHTML; 
+				} else {
+					question["question"] = qNode.find("td:nth-child(2) textarea")[0].value; 
+				}
 				question["answer"] = qNode.find("td:nth-child(3) input[type=text]")[0].value; 
 				site["questions"].push(question);
 			}
@@ -159,6 +185,59 @@ var UI = {
 		}
 		return sites;
 	},
+	collectUpdate: function() {
+		var sites = UI.collect();
+		var nodes = $("#save-div table:visible tbody.site-body-input");
+		nodes.remove();
+		for(var i = 0; i < sites.length; i++) {
+			var site = sites[i];
+			var node = $("#save-div table:hidden tbody.site-body").clone(true);
+			node.find("tr:first td:nth-child(1)")[0].innerHTML = site["name"];
+			node.find("tr:first td:nth-child(2)")[0].innerHTML = site["user"];
+			node.find("tr:first td:nth-child(3)")[0].innerHTML = site["pass"];
+			node.find("tr:not(tr:first)").remove();
+			if(site.hasOwnProperty("questions")) {
+				for(var j = 0; j < site["questions"].length; j++) {
+					var question = site["questions"][j];
+					var qNode = $("#save-div table:hidden tbody.site-body tr:nth-child(2)").clone(true);
+					qNode.find("td:nth-child(2)")[0].innerHTML = question.question;
+					qNode.find("td:nth-child(3)")[0].innerHTML = question.answer;
+					node.find("tr:last").after(qNode);
+				}
+			}
+			//if($("#save-div table:visible tbody:last").length == 0) {
+				$("#save-div table:visible thead:last").after(node);
+			//} else {
+			//	$("#save-div table:visible tbody:last").after(node);
+			//}
+		}
+		return sites;
+	},
+	getSites: function() {
+		UI.collectUpdate();
+		var nodes = $("#save-div table:visible tbody.site-body");
+		var sites = [];
+		for(var i = 0; i < nodes.length;i++) {
+			var site = {};
+			var node = $(nodes[i]);
+			site["name"] = node.find("tr:first td:nth-child(1)")[0].innerHTML;
+			site["user"] = node.find("tr:first td:nth-child(2)")[0].innerHTML;
+			site["pass"] = node.find("tr:first td:nth-child(3)")[0].innerHTML;
+			var questions = node.find("tr:not(:first)");
+			if(questions.length > 0) {
+				site["questions"] = [];
+			}
+			for(var j = 0;j< questions.length;j++) {
+				var question = {};
+				var qNode = $(questions[j]);
+				question["question"] = qNode.find("td:nth-child(2)")[0].innerHTML;
+				question["answer"] = qNode.find("td:nth-child(3)")[0].innerHTML;
+				site["questions"].push(question);
+			}
+			sites.push(site);
+		}
+		return sites;
+	}
 };
 
 $(document).ready(function() {
@@ -190,7 +269,6 @@ $(document).ready(function() {
 <tbody class="site-body hover">
 <tr><td>example.com</td><td>user@example.com</td><td>testpass</td></tr>
 <tr><td></td><td>Question 1</td><td>Answer 1</td></tr>
-<tr><td></td><td>Question 2</td><td>Answer 2</td></tr>
 </tbody>
 <tbody class="site-body-input">
 <tr><td><input type="text" value="Site name" class="site-name"></td><td><input type="text" value="Site-specific email" class="site-user"></td><td><input type="text" value="password" class="site-pass"></td></tr>
