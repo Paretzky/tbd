@@ -52,6 +52,7 @@ server.on("request",function(req,res){
 		if(!id.match(/^\d+$/)) {
 			res.writeHead(404);
 			res.end("404-2");
+			return;
 		}
 		req.on("data", function(chunk) {	
 			console.log("chunk\t"+chunk);		
